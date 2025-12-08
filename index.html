@@ -7,7 +7,7 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@200;400;600&display=swap" rel="stylesheet">
     
     <style>
         :root {
@@ -28,7 +28,7 @@
             background-color: var(--bg-dark);
             color: var(--text-main);
             font-family: 'Inter', sans-serif;
-            overflow: hidden; /* Prevent scrolling, scene handles visuals */
+            overflow: hidden;
             height: 100vh;
             width: 100vw;
         }
@@ -40,7 +40,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* Let clicks pass through to 3D where needed */
+            pointer-events: none; /* Ensure clicks pass through to canvas */
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -51,29 +51,32 @@
 
         /* Logo */
         .logo {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
             font-size: 1.5rem;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.1em;
+            text-transform: lowercase;
             color: var(--text-main);
             align-self: flex-start;
             pointer-events: auto;
         }
         .logo span { color: var(--coral); }
 
-        /* Main Content */
+        /* Main Content - Moved higher up to clear center */
         .hero-content {
             text-align: center;
             max-width: 600px;
             pointer-events: auto;
-            margin-bottom: 5vh; /* Push up slightly */
+            margin-top: 5vh; 
         }
 
         h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 3.5rem;
-            font-weight: 400;
-            line-height: 1.2;
-            margin-bottom: 1rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 4rem;
+            font-weight: 200; /* ultra-modern thin look */
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -0.02em;
             opacity: 0;
             animation: fadeIn 1.5s ease forwards 0.5s;
         }
@@ -117,10 +120,6 @@
             font-family: 'Inter', sans-serif;
         }
 
-        input[type="email"]::placeholder {
-            color: #666;
-        }
-
         button {
             background-color: var(--coral);
             color: white;
@@ -138,11 +137,12 @@
             background-color: #ff6b3d;
         }
 
-        /* Footer */
+        /* Footer - Moved lower */
         footer {
             font-size: 0.8rem;
             color: #444;
             opacity: 0;
+            margin-bottom: 1rem;
             animation: fadeIn 1.5s ease forwards 1.5s;
         }
 
@@ -154,19 +154,16 @@
             width: 100%;
             height: 100%;
             z-index: 1;
+             /* Important: allows pointer events on the canvas for raycasting */
+            pointer-events: auto;
         }
 
-        /* Animations */
-        @keyframes fadeIn {
-            to { opacity: 1; }
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeIn { to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         @media (max-width: 768px) {
-            h1 { font-size: 2.5rem; }
+            h1 { font-size: 2.8rem; }
+            .hero-content { margin-top: 2vh;}
             .input-group { flex-direction: column; background: transparent; border: none; gap: 15px; }
             input[type="email"] { background: rgba(255,255,255,0.05); border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
             button { width: 100%; }
@@ -179,17 +176,14 @@
 
     <div id="ui-container">
         <div class="logo">coral<span>.ink</span></div>
-
         <div class="hero-content">
-            <h1>Flow with ideas.</h1>
-            <p class="subtitle">The modern workspace for creative writers and fluid thinkers.<br>Join the waitlist to get early access.</p>
-            
+            <h1>FLOW STATE.</h1>
+            <p class="subtitle">The next-generation workspace for fluid creative writing.<br>Sign up for early access.</p>
             <form class="input-group" onsubmit="event.preventDefault(); alert('Welcome to Coral.ink');">
                 <input type="email" placeholder="your@email.com" required>
                 <button type="submit">Join Waitlist</button>
             </form>
         </div>
-
         <footer>&copy; 2025 Coral Ink. All rights reserved.</footer>
     </div>
 
@@ -199,152 +193,189 @@
         // --- 3D SCENE SETUP ---
         const container = document.getElementById('canvas-container');
         const scene = new THREE.Scene();
-        
-        // Fog to blend floor into background
-        scene.fog = new THREE.FogExp2(0x0b0b0b, 0.03);
+        scene.fog = new THREE.FogExp2(0x0b0b0b, 0.035);
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 3, 7);
-        camera.lookAt(0, 0, 0);
+        // Adjusted camera angle to look slightly more down into the pot
+        camera.position.set(0, 4, 8);
+        camera.lookAt(0, 0.5, 0);
 
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(renderer.domElement);
 
+        // --- INTERACTION STATE ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let isHovering = false;
+        let isMouseDown = false;
+        // Target Y position for the pen. Normal: 2.2, Dabbed: 0.6
+        let targetPenY = 2.2; 
+
         // --- LIGHTING ---
-        const ambientLight = new THREE.AmbientLight(0x404040, 2); // Soft white light
+        const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
         scene.add(ambientLight);
 
-        // Key light (Warm)
         const spotLight = new THREE.SpotLight(0xffdec7, 2);
-        spotLight.position.set(5, 10, 5);
+        spotLight.position.set(5, 12, 5);
         spotLight.castShadow = true;
-        spotLight.shadow.mapSize.width = 1024;
-        spotLight.shadow.mapSize.height = 1024;
         scene.add(spotLight);
 
-        // Rim light (Coral tint to emphasize theme)
-        const rimLight = new THREE.PointLight(0xff7f50, 1, 10);
-        rimLight.position.set(-5, 2, -5);
+        const rimLight = new THREE.PointLight(0xff7f50, 1.5, 15);
+        rimLight.position.set(-4, 3, -4);
         scene.add(rimLight);
 
         // --- MATERIALS ---
-        
-        // Glass for the pot
         const glassMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xffffff,
-            metalness: 0,
-            roughness: 0.05,
-            transmission: 0.9, // Glass-like transmission
-            thickness: 0.5,
-            transparent: true,
-            opacity: 0.4
+            color: 0xffffff, metalness: 0, roughness: 0.1,
+            transmission: 0.95, thickness: 0.5, transparent: true, opacity: 0.3,
+            side: THREE.DoubleSide // Important for the complex glass shape
         });
 
-        // The Coral Ink
         const inkMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xff7f50, // Coral
-            metalness: 0.2,
-            roughness: 0.2,
-            clearcoat: 1.0,
-            clearcoatRoughness: 0.1,
-            emissive: 0xff7f50,
-            emissiveIntensity: 0.2
+            color: 0xff7f50, metalness: 0.1, roughness: 0.3,
+            clearcoat: 1.0, emissive: 0xff7f50, emissiveIntensity: 0.3
         });
 
-        // Gold/Brass for the Nib
-        const metalMaterial = new THREE.MeshStandardMaterial({
-            color: 0xffd700,
-            metalness: 1.0,
-            roughness: 0.3
+        // NIB Material - older, slightly tarnished metal
+        const nibMaterial = new THREE.MeshStandardMaterial({
+            color: 0xcbb192, metalness: 0.9, roughness: 0.4
         });
 
-        // Handle black
         const handleMaterial = new THREE.MeshStandardMaterial({
-            color: 0x111111,
-            roughness: 0.6
+            color: 0x221f1f, roughness: 0.8
         });
 
         // --- GEOMETRY CONSTRUCTION ---
-
         const centerGroup = new THREE.Group();
         scene.add(centerGroup);
 
-        // 1. The Glass Pot
-        const potGeo = new THREE.CylinderGeometry(1.2, 1.1, 1.5, 32);
+        // 1. COMPLEX GLASS POT (Using LatheGeometry for distinct shape)
+        const potPoints = [];
+        // Define the profile curve of the glass pot base to rim
+        potPoints.push(new THREE.Vector2(0, 0)); // Bottom center
+        potPoints.push(new THREE.Vector2(1.4, 0)); // Base width
+        potPoints.push(new THREE.Vector2(1.4, 0.3)); // Base corner
+        potPoints.push(new THREE.Vector2(0.8, 0.6)); // Curve in
+        potPoints.push(new THREE.Vector2(0.6, 1.2)); // Neck
+        potPoints.push(new THREE.Vector2(1.0, 1.5)); // Flared rim top outer
+        // Inner wall (thickness)
+        potPoints.push(new THREE.Vector2(0.85, 1.5)); // Flared rim top inner
+        potPoints.push(new THREE.Vector2(0.45, 1.2)); // Neck inner
+        potPoints.push(new THREE.Vector2(0.65, 0.6)); // Curve inner
+        potPoints.push(new THREE.Vector2(1.2, 0.3)); // Base corner inner
+        potPoints.push(new THREE.Vector2(1.2, 0.1)); // Bottom floor inner
+        potPoints.push(new THREE.Vector2(0, 0.1)); // Bottom center inner
+
+        const potGeo = new THREE.LatheGeometry(potPoints, 64);
         const pot = new THREE.Mesh(potGeo, glassMaterial);
-        pot.position.y = 0.75;
         pot.castShadow = true;
         centerGroup.add(pot);
 
-        // 2. The Liquid (Ink)
-        // Slightly smaller than pot
-        const inkGeo = new THREE.CylinderGeometry(1.05, 0.95, 1.0, 32);
+        // 2. THE INK LIQUID (Matching the bottom inner shape)
+        const inkPoints = [];
+        inkPoints.push(new THREE.Vector2(0, 0.1));
+        inkPoints.push(new THREE.Vector2(1.2, 0.1));
+        inkPoints.push(new THREE.Vector2(1.2, 0.3));
+        inkPoints.push(new THREE.Vector2(0.75, 0.65)); // Fill up to here
+        inkPoints.push(new THREE.Vector2(0, 0.65)); // Top surface center
+        const inkGeo = new THREE.LatheGeometry(inkPoints, 32);
         const ink = new THREE.Mesh(inkGeo, inkMaterial);
-        ink.position.y = 0.55; // Sit at bottom of pot
         centerGroup.add(ink);
 
-        // 3. The Pen/Nib Assembly (Floating)
+
+        // 3. THE PEN/NIB ASSEMBLY
         const penGroup = new THREE.Group();
-        
-        // The Nib (Tip)
-        const nibGeo = new THREE.ConeGeometry(0.15, 0.8, 16);
-        const nib = new THREE.Mesh(nibGeo, metalMaterial);
+
+        // The Nib - Flattened Cone to look like metal nib
+        const nibGeo = new THREE.ConeGeometry(0.2, 0.8, 32);
+        // Scale it on the Z-axis to flatten it significantly
+        nibGeo.scale(1.2, 1, 0.15); 
+        const nib = new THREE.Mesh(nibGeo, nibMaterial);
         nib.rotation.x = Math.PI; // Point down
         nib.position.y = 0.4;
         penGroup.add(nib);
 
-        // The Nib Holder (Metal Ring)
-        const holderGeo = new THREE.CylinderGeometry(0.2, 0.15, 0.4, 16);
-        const holder = new THREE.Mesh(holderGeo, metalMaterial);
-        holder.position.y = 0.9;
-        penGroup.add(holder);
+        // The Metal Ferrule holding the nib
+        const ferruleGeo = new THREE.CylinderGeometry(0.22, 0.18, 0.5, 32);
+        // Flatten slightly to match nib
+        ferruleGeo.scale(1, 1, 0.8);
+        const ferrule = new THREE.Mesh(ferruleGeo, nibMaterial);
+        ferrule.position.y = 0.95;
+        penGroup.add(ferrule);
 
-        // The Pen Body (Handle)
-        const handleGeo = new THREE.CylinderGeometry(0.2, 0.2, 3, 16);
+        // The Handle
+        const handleGeo = new THREE.CylinderGeometry(0.22, 0.15, 3.5, 32);
         const handle = new THREE.Mesh(handleGeo, handleMaterial);
-        handle.position.y = 2.6;
+        handle.position.y = 2.95;
         penGroup.add(handle);
 
-        // Position the pen hovering over the pot, angled
-        penGroup.position.set(0, 1.8, 0);
-        penGroup.rotation.z = -Math.PI / 8; // Tilt slightly
+        // Initial pen position
+        penGroup.position.set(0, targetPenY, 0);
+        // Slight tilt for style
+        penGroup.rotation.z = -Math.PI / 12; 
         centerGroup.add(penGroup);
+
+        // --- EVENT LISTENERS FOR INTERACTION ---
+        
+        function updateMouse(event) {
+            // Normalize mouse coordinates to -1 to +1
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        window.addEventListener('pointermove', updateMouse);
+        
+        window.addEventListener('pointerdown', (event) => {
+            updateMouse(event);
+            if (isHovering) {
+                isMouseDown = true;
+                targetPenY = 0.6; // Dab position
+                document.body.style.cursor = 'grabbing';
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            isMouseDown = false;
+            targetPenY = 2.2; // Reset to hover position
+            document.body.style.cursor = isHovering ? 'grab' : 'default';
+        });
 
 
         // --- ANIMATION LOOP ---
-        
-        let mouseX = 0;
-        let mouseY = 0;
-        let targetRotationX = 0;
-        let targetRotationY = 0;
-
-        // Add subtle mouse interaction
-        document.addEventListener('mousemove', (event) => {
-            mouseX = (event.clientX - window.innerWidth / 2) * 0.001;
-            mouseY = (event.clientY - window.innerHeight / 2) * 0.001;
-        });
-
         const clock = new THREE.Clock();
 
         function animate() {
             requestAnimationFrame(animate);
-
             const elapsedTime = clock.getElapsedTime();
 
-            // 1. Rotate the whole group slowly
-            centerGroup.rotation.y += 0.003;
+            // 1. Raycasting for Hover Detection
+            raycaster.setFromCamera(mouse, camera);
+            // Check intersection with the main group
+            const intersects = raycaster.intersectObject(centerGroup, true);
+            
+            if (intersects.length > 0) {
+                isHovering = true;
+                if (!isMouseDown) document.body.style.cursor = 'grab';
+            } else {
+                isHovering = false;
+                if (!isMouseDown) document.body.style.cursor = 'default';
+            }
 
-            // 2. Floating animation for the pen
-            penGroup.position.y = 1.8 + Math.sin(elapsedTime * 1.5) * 0.1;
+            // 2. Rotation Logic
+            // Only rotate if NOT hovering and NOT holding down click
+            if (!isHovering && !isMouseDown) {
+                centerGroup.rotation.y += 0.004;
+                // Add a slight gentle bob when floating freely
+                 penGroup.position.y = targetPenY + Math.sin(elapsedTime * 1.5) * 0.05;
+            }
 
-            // 3. Subtle mouse parallax on the whole group
-            centerGroup.rotation.x += (mouseY - centerGroup.rotation.x) * 0.05;
-            centerGroup.rotation.z += (mouseX - centerGroup.rotation.z) * 0.05;
-
+            // 3. Dabbing Logic (Smooth transition)
+            // Smoothly lerp current position towards target position
+            penGroup.position.y = THREE.MathUtils.lerp(penGroup.position.y, targetPenY, 0.1);
+            
             renderer.render(scene, camera);
         }
 
