@@ -213,34 +213,73 @@
         // Target Y position for the pen. Normal: 2.2, Dabbed: 0.6
         let targetPenY = 2.2; 
 
-        // --- LIGHTING ---
-        const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
+        // --- ENHANCED LIGHTING for dramatic effect ---
+        const ambientLight = new THREE.AmbientLight(0x2a2a3a, 1.2);
         scene.add(ambientLight);
 
-        const spotLight = new THREE.SpotLight(0xffdec7, 2);
+        // Main spotlight - warm overhead light
+        const spotLight = new THREE.SpotLight(0xffdec7, 3);
         spotLight.position.set(5, 12, 5);
+        spotLight.angle = Math.PI / 6;
+        spotLight.penumbra = 0.4;
+        spotLight.decay = 1.5;
         spotLight.castShadow = true;
+        spotLight.shadow.mapSize.width = 2048;
+        spotLight.shadow.mapSize.height = 2048;
         scene.add(spotLight);
 
-        const rimLight = new THREE.PointLight(0xff7f50, 1.5, 15);
+        // Rim light for glass highlights
+        const rimLight = new THREE.PointLight(0x8899ff, 2, 18);
         rimLight.position.set(-4, 3, -4);
         scene.add(rimLight);
 
+        // Accent light to highlight the nib
+        const nibLight = new THREE.PointLight(0xffffff, 1, 8);
+        nibLight.position.set(1, 4, 3);
+        scene.add(nibLight);
+
+        // Subtle fill light from below for glass transparency
+        const fillLight = new THREE.PointLight(0x4466aa, 0.5, 10);
+        fillLight.position.set(0, -2, 0);
+        scene.add(fillLight);
+
         // --- MATERIALS ---
+        // Enhanced glass material with better refraction
         const glassMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xffffff, metalness: 0, roughness: 0.1,
-            transmission: 0.95, thickness: 0.5, transparent: true, opacity: 0.3,
-            side: THREE.DoubleSide // Important for the complex glass shape
+            color: 0xffffff,
+            metalness: 0,
+            roughness: 0.05,
+            transmission: 0.98,
+            thickness: 0.6,
+            transparent: true,
+            opacity: 0.15,
+            ior: 1.5, // Glass index of refraction
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.1,
+            envMapIntensity: 1.5,
+            side: THREE.DoubleSide
         });
 
+        // Realistic ink material - dark blue-black with translucency
         const inkMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0xff7f50, metalness: 0.1, roughness: 0.3,
-            clearcoat: 1.0, emissive: 0xff7f50, emissiveIntensity: 0.3
+            color: 0x1a0f2e, // Dark blue-black
+            metalness: 0,
+            roughness: 0.15,
+            transmission: 0.3, // Slightly translucent like real ink
+            thickness: 0.8,
+            transparent: true,
+            opacity: 0.9,
+            clearcoat: 0.5,
+            clearcoatRoughness: 0.1,
+            ior: 1.4 // Index of refraction similar to ink
         });
 
-        // NIB Material - older, slightly tarnished metal
+        // NIB Material - vintage brass/bronze with slight tarnish
         const nibMaterial = new THREE.MeshStandardMaterial({
-            color: 0xcbb192, metalness: 0.9, roughness: 0.4
+            color: 0xd4af37, // Gold/brass color
+            metalness: 0.95,
+            roughness: 0.25,
+            envMapIntensity: 1.2
         });
 
         const handleMaterial = new THREE.MeshStandardMaterial({
@@ -251,51 +290,112 @@
         const centerGroup = new THREE.Group();
         scene.add(centerGroup);
 
-        // 1. COMPLEX GLASS POT (Using LatheGeometry for distinct shape)
+        // 1. ELEGANT GLASS INK POT with decorative details
         const potPoints = [];
-        // Define the profile curve of the glass pot base to rim
+        // Define a more elegant profile with decorative ridges
         potPoints.push(new THREE.Vector2(0, 0)); // Bottom center
-        potPoints.push(new THREE.Vector2(1.4, 0)); // Base width
-        potPoints.push(new THREE.Vector2(1.4, 0.3)); // Base corner
-        potPoints.push(new THREE.Vector2(0.8, 0.6)); // Curve in
-        potPoints.push(new THREE.Vector2(0.6, 1.2)); // Neck
-        potPoints.push(new THREE.Vector2(1.0, 1.5)); // Flared rim top outer
+        potPoints.push(new THREE.Vector2(1.5, 0)); // Base width (wider)
+        potPoints.push(new THREE.Vector2(1.5, 0.15)); // Base edge
+        potPoints.push(new THREE.Vector2(1.4, 0.2)); // Decorative ring start
+        potPoints.push(new THREE.Vector2(1.45, 0.25)); // Ring
+        potPoints.push(new THREE.Vector2(1.4, 0.3)); // Ring end
+        potPoints.push(new THREE.Vector2(0.85, 0.65)); // Elegant curve in
+        potPoints.push(new THREE.Vector2(0.7, 0.9)); // Narrow waist
+        potPoints.push(new THREE.Vector2(0.65, 1.1)); // Neck start
+        potPoints.push(new THREE.Vector2(0.6, 1.25)); // Slender neck
+        potPoints.push(new THREE.Vector2(0.95, 1.45)); // Shoulder flare
+        potPoints.push(new THREE.Vector2(1.05, 1.6)); // Wide rim outer
         // Inner wall (thickness)
-        potPoints.push(new THREE.Vector2(0.85, 1.5)); // Flared rim top inner
-        potPoints.push(new THREE.Vector2(0.45, 1.2)); // Neck inner
-        potPoints.push(new THREE.Vector2(0.65, 0.6)); // Curve inner
-        potPoints.push(new THREE.Vector2(1.2, 0.3)); // Base corner inner
-        potPoints.push(new THREE.Vector2(1.2, 0.1)); // Bottom floor inner
-        potPoints.push(new THREE.Vector2(0, 0.1)); // Bottom center inner
+        potPoints.push(new THREE.Vector2(0.9, 1.6)); // Rim inner
+        potPoints.push(new THREE.Vector2(0.8, 1.45)); // Shoulder inner
+        potPoints.push(new THREE.Vector2(0.45, 1.25)); // Neck inner
+        potPoints.push(new THREE.Vector2(0.5, 1.1)); // Neck inner
+        potPoints.push(new THREE.Vector2(0.55, 0.9)); // Waist inner
+        potPoints.push(new THREE.Vector2(0.7, 0.65)); // Curve inner
+        potPoints.push(new THREE.Vector2(1.25, 0.3)); // Base inner
+        potPoints.push(new THREE.Vector2(1.3, 0.25)); // Ring inner
+        potPoints.push(new THREE.Vector2(1.25, 0.2)); // Ring inner
+        potPoints.push(new THREE.Vector2(1.3, 0.15)); // Base inner edge
+        potPoints.push(new THREE.Vector2(1.3, 0.12)); // Bottom floor inner
+        potPoints.push(new THREE.Vector2(0, 0.12)); // Bottom center inner
 
         const potGeo = new THREE.LatheGeometry(potPoints, 64);
         const pot = new THREE.Mesh(potGeo, glassMaterial);
         pot.castShadow = true;
+        pot.receiveShadow = true;
         centerGroup.add(pot);
 
-        // 2. THE INK LIQUID (Matching the bottom inner shape)
+        // Add decorative glass ridges
+        for (let i = 0; i < 3; i++) {
+            const ridgeGeo = new THREE.TorusGeometry(0.68 + i * 0.03, 0.015, 8, 32);
+            const ridge = new THREE.Mesh(ridgeGeo, glassMaterial);
+            ridge.position.y = 0.95 + i * 0.1;
+            ridge.rotation.x = Math.PI / 2;
+            centerGroup.add(ridge);
+        }
+
+        // 2. THE INK LIQUID (Matching the new pot shape)
         const inkPoints = [];
-        inkPoints.push(new THREE.Vector2(0, 0.1));
-        inkPoints.push(new THREE.Vector2(1.2, 0.1));
-        inkPoints.push(new THREE.Vector2(1.2, 0.3));
-        inkPoints.push(new THREE.Vector2(0.75, 0.65)); // Fill up to here
-        inkPoints.push(new THREE.Vector2(0, 0.65)); // Top surface center
-        const inkGeo = new THREE.LatheGeometry(inkPoints, 32);
+        inkPoints.push(new THREE.Vector2(0, 0.12));
+        inkPoints.push(new THREE.Vector2(1.3, 0.12));
+        inkPoints.push(new THREE.Vector2(1.3, 0.15));
+        inkPoints.push(new THREE.Vector2(1.25, 0.2));
+        inkPoints.push(new THREE.Vector2(1.3, 0.25));
+        inkPoints.push(new THREE.Vector2(1.25, 0.3));
+        inkPoints.push(new THREE.Vector2(0.75, 0.7)); // Fill level
+        inkPoints.push(new THREE.Vector2(0, 0.7)); // Top surface center
+        const inkGeo = new THREE.LatheGeometry(inkPoints, 48);
         const ink = new THREE.Mesh(inkGeo, inkMaterial);
+        ink.castShadow = true;
         centerGroup.add(ink);
 
 
         // 3. THE PEN/NIB ASSEMBLY
         const penGroup = new THREE.Group();
 
-        // The Nib - Flattened Cone to look like metal nib
-        const nibGeo = new THREE.ConeGeometry(0.2, 0.8, 32);
-        // Scale it on the Z-axis to flatten it significantly
-        nibGeo.scale(1.2, 1, 0.15); 
-        const nib = new THREE.Mesh(nibGeo, nibMaterial);
-        nib.rotation.x = Math.PI; // Point down
-        nib.position.y = 0.4;
-        penGroup.add(nib);
+        // The Nib - Proper bifurcated design with split
+        const nibGroup = new THREE.Group();
+
+        // Main nib body - elegant curved shape
+        const nibBodyGeo = new THREE.ConeGeometry(0.25, 1.0, 32);
+        nibBodyGeo.scale(1.4, 1, 0.12); // Flatten to create classic nib shape
+        const nibBody = new THREE.Mesh(nibBodyGeo, nibMaterial);
+        nibBody.rotation.x = Math.PI; // Point down
+        nibGroup.add(nibBody);
+
+        // Create the split/slit down the middle using two thin boxes
+        const slitGeo = new THREE.BoxGeometry(0.02, 0.85, 0.15);
+        const slitMat = new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            metalness: 0.3,
+            roughness: 0.8
+        });
+        const slit = new THREE.Mesh(slitGeo, slitMat);
+        slit.position.y = -0.05;
+        nibGroup.add(slit);
+
+        // Breather hole (circular hole near the base)
+        const holeGeo = new THREE.TorusGeometry(0.08, 0.02, 16, 32);
+        holeGeo.rotateX(Math.PI / 2);
+        const hole = new THREE.Mesh(holeGeo, slitMat);
+        hole.position.y = 0.25;
+        nibGroup.add(hole);
+
+        // Add subtle tines curvature (left and right sides)
+        const tineGeo = new THREE.BoxGeometry(0.14, 0.4, 0.08);
+
+        const leftTine = new THREE.Mesh(tineGeo, nibMaterial);
+        leftTine.position.set(-0.08, -0.3, 0);
+        leftTine.rotation.z = 0.05;
+        nibGroup.add(leftTine);
+
+        const rightTine = new THREE.Mesh(tineGeo, nibMaterial);
+        rightTine.position.set(0.08, -0.3, 0);
+        rightTine.rotation.z = -0.05;
+        nibGroup.add(rightTine);
+
+        nibGroup.position.y = 0.4;
+        penGroup.add(nibGroup);
 
         // The Metal Ferrule holding the nib
         const ferruleGeo = new THREE.CylinderGeometry(0.22, 0.18, 0.5, 32);
